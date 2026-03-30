@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - EventPlatform</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-admin">
+        <div class="nav-brand">
+            <span class="logo-icon">🎟️</span>
+            <a href="/admin.html">EventPlatform Admin</a>
+        </div>
+        <div class="nav-links">
+            <a href="#overview" class="active" onclick="showTab('overview')">Overview</a>
+            <a href="#events" onclick="showTab('events')">Events</a>
+            <a href="#bookings" onclick="showTab('bookings')">Bookings</a>
+            <a href="#users" onclick="showTab('users')">Users</a>
+            <span id="nav-user-links"></span>
+        </div>
+    </nav>
+
+    <div class="main-content page-with-nav">
+        <!-- Overview Tab -->
+        <div id="tab-overview" class="tab-content">
+            <div class="dashboard-header">
+                <h1>Admin Dashboard</h1>
+                <p>Platform overview and analytics</p>
+            </div>
+
+            <div class="stats-grid stats-grid-5">
+                <div class="stat-card stat-primary">
+                    <div class="stat-icon">📅</div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="stat-total-events">-</div>
+                        <div class="stat-label">Total Events</div>
+                    </div>
+                </div>
+                <div class="stat-card stat-success">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="stat-total-users">-</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                </div>
+                <div class="stat-card stat-info">
+                    <div class="stat-icon">🎫</div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="stat-tickets-sold">-</div>
+                        <div class="stat-label">Tickets Sold</div>
+                    </div>
+                </div>
+                <div class="stat-card stat-warning">
+                    <div class="stat-icon">💵</div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="stat-revenue">-</div>
+                        <div class="stat-label">Total Revenue</div>
+                    </div>
+                </div>
+                <div class="stat-card stat-upcoming">
+                    <div class="stat-icon">🕐</div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="stat-upcoming">-</div>
+                        <div class="stat-label">Upcoming Events</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-grid">
+                <div class="admin-card">
+                    <h3>Recent Bookings</h3>
+                    <div id="recent-bookings-table"></div>
+                </div>
+                <div class="admin-card">
+                    <h3>Events Performance</h3>
+                    <div id="events-performance-table"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Events Tab -->
+        <div id="tab-events" class="tab-content hidden">
+            <div class="dashboard-header">
+                <h2>Manage Events</h2>
+                <button class="btn btn-primary" onclick="showCreateEventForm()">+ Create Event</button>
+            </div>
+
+            <div id="event-form-container" class="hidden">
+                <div class="form-card">
+                    <h3 id="event-form-title">Create New Event</h3>
+                    <div id="event-form-alert" class="alert hidden"></div>
+                    <form id="event-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Title *</label>
+                                <input type="text" id="ev-title" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Category</label>
+                                <select id="ev-category">
+                                    <option value="Technology">Technology</option>
+                                    <option value="Music">Music</option>
+                                    <option value="Business">Business</option>
+                                    <option value="Art">Art</option>
+                                    <option value="Entertainment">Entertainment</option>
+                                    <option value="Sports">Sports</option>
+                                    <option value="Food">Food</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Venue *</label>
+                                <input type="text" id="ev-venue" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Location *</label>
+                                <input type="text" id="ev-location" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Event Date & Time *</label>
+                                <input type="datetime-local" id="ev-date" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Total Tickets *</label>
+                                <input type="number" id="ev-tickets" min="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Ticket Price (₹) *</label>
+                                <input type="number" id="ev-price" min="0" step="0.01" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select id="ev-status">
+                                    <option value="UPCOMING">Upcoming</option>
+                                    <option value="ONGOING">Ongoing</option>
+                                    <option value="COMPLETED">Completed</option>
+                                    <option value="CANCELLED">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="ev-description" rows="3"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Image URL (optional)</label>
+                            <input type="url" id="ev-image">
+                        </div>
+                        <input type="hidden" id="ev-edit-id">
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="event-submit-btn">Create Event</button>
+                            <button type="button" class="btn btn-outline" onclick="hideEventForm()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="events-admin-loading" class="loading-state">
+                <div class="spinner-large"></div>
+            </div>
+            <div id="events-admin-list" class="hidden"></div>
+        </div>
+
+        <!-- Bookings Tab -->
+        <div id="tab-bookings" class="tab-content hidden">
+            <div class="dashboard-header">
+                <h2>All Bookings</h2>
+            </div>
+            <div id="bookings-admin-loading" class="loading-state">
+                <div class="spinner-large"></div>
+            </div>
+            <div id="bookings-admin-table" class="hidden"></div>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="tab-users" class="tab-content hidden">
+            <div class="dashboard-header">
+                <h2>Registered Users</h2>
+            </div>
+            <div id="users-admin-loading" class="loading-state">
+                <div class="spinner-large"></div>
+            </div>
+            <div id="users-admin-table" class="hidden"></div>
+        </div>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div id="delete-modal" class="modal hidden">
+        <div class="modal-backdrop" onclick="closeDeleteModal()"></div>
+        <div class="modal-content modal-small">
+            <h3>Delete Event?</h3>
+            <p>This will permanently delete the event and all associated bookings.</p>
+            <div class="modal-actions">
+                <button class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+                <button class="btn btn-outline" onclick="closeDeleteModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/script.js"></script>
+    <script>
+        requireAdmin();
+        updateNavLinks();
+        loadDashboard();
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+
+            if (tabName === 'events') loadAdminEvents();
+            else if (tabName === 'bookings') loadAdminBookings();
+            else if (tabName === 'users') loadAdminUsers();
+        }
+
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/admin/dashboard', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                });
+                const data = await response.json();
+
+                document.getElementById('stat-total-events').textContent = data.totalEvents;
+                document.getElementById('stat-total-users').textContent = data.totalUsers;
+                document.getElementById('stat-tickets-sold').textContent = data.totalTicketsSold;
+                document.getElementById('stat-revenue').textContent = '₹' + (data.totalRevenue || 0).toFixed(2);
+                document.getElementById('stat-upcoming').textContent = data.upcomingEvents;
+
+                renderRecentBookings(data.recentBookings || []);
+                renderEventsPerformance(data.topEvents || []);
+            } catch (err) {
+                console.error('Dashboard error:', err);
+            }
+        }
+
+        function renderRecentBookings(bookings) {
+            const el = document.getElementById('recent-bookings-table');
+            if (bookings.length === 0) { el.innerHTML = '<p class="empty-text">No bookings yet.</p>'; return; }
+            el.innerHTML = `<table class="data-table">
+                <thead><tr><th>Reference</th><th>Event</th><th>User</th><th>Tickets</th><th>Amount</th><th>Status</th></tr></thead>
+                <tbody>${bookings.map(b => `
+                    <tr>
+                        <td><code>${b.bookingReference}</code></td>
+                        <td>${b.eventTitle}</td>
+                        <td>${b.userFullName}</td>
+                        <td>${b.numberOfTickets}</td>
+                        <td>₹${parseFloat(b.totalAmount).toFixed(2)}</td>
+                        <td><span class="status-badge ${b.bookingStatus === 'CONFIRMED' ? 'success' : 'danger'}">${b.bookingStatus}</span></td>
+                    </tr>`).join('')}
+                </tbody></table>`;
+        }
+
+        function renderEventsPerformance(events) {
+            const el = document.getElementById('events-performance-table');
+            if (events.length === 0) { el.innerHTML = '<p class="empty-text">No events yet.</p>'; return; }
+            el.innerHTML = `<table class="data-table">
+                <thead><tr><th>Event</th><th>Sold</th><th>Attendees</th><th>Revenue</th></tr></thead>
+                <tbody>${events.map(e => `
+                    <tr>
+                        <td>${e.eventTitle}</td>
+                        <td>${e.ticketsSold}</td>
+                        <td>${e.attendees}</td>
+                        <td>₹${(e.revenue || 0).toFixed(2)}</td>
+                    </tr>`).join('')}
+                </tbody></table>`;
+        }
+
+        async function loadAdminEvents() {
+            document.getElementById('events-admin-loading').classList.remove('hidden');
+            document.getElementById('events-admin-list').classList.add('hidden');
+            try {
+                const response = await fetch('/api/events/all', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                });
+                const events = await response.json();
+                renderAdminEvents(events);
+            } catch (err) {
+                document.getElementById('events-admin-loading').innerHTML = '<p class="error-text">Failed to load events.</p>';
+            }
+        }
+
+        function renderAdminEvents(events) {
+            document.getElementById('events-admin-loading').classList.add('hidden');
+            const el = document.getElementById('events-admin-list');
+            el.classList.remove('hidden');
+            if (events.length === 0) { el.innerHTML = '<p class="empty-text">No events yet.</p>'; return; }
+            el.innerHTML = `<table class="data-table">
+                <thead><tr><th>Title</th><th>Date</th><th>Venue</th><th>Price</th><th>Available</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>${events.map(e => `
+                    <tr>
+                        <td><strong>${e.title}</strong></td>
+                        <td>${new Date(e.eventDate).toLocaleDateString()}</td>
+                        <td>${e.venue}</td>
+                        <td>₹${parseFloat(e.ticketPrice).toFixed(2)}</td>
+                        <td>${e.availableTickets}/${e.totalTickets}</td>
+                        <td><span class="status-badge ${e.status === 'UPCOMING' ? 'info' : e.status === 'CANCELLED' ? 'danger' : 'success'}">${e.status}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline" onclick="editEvent(${e.id})">Edit</button>
+                            <button class="btn btn-sm btn-danger-outline" onclick="deleteEvent(${e.id})">Delete</button>
+                        </td>
+                    </tr>`).join('')}
+                </tbody></table>`;
+        }
+
+        async function loadAdminBookings() {
+            document.getElementById('bookings-admin-loading').classList.remove('hidden');
+            document.getElementById('bookings-admin-table').classList.add('hidden');
+            try {
+                const response = await fetch('/api/admin/bookings', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                });
+                const bookings = await response.json();
+                document.getElementById('bookings-admin-loading').classList.add('hidden');
+                const el = document.getElementById('bookings-admin-table');
+                el.classList.remove('hidden');
+                if (bookings.length === 0) { el.innerHTML = '<p class="empty-text">No bookings yet.</p>'; return; }
+                el.innerHTML = `<table class="data-table">
+                    <thead><tr><th>Reference</th><th>Event</th><th>User</th><th>Email</th><th>Tickets</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+                    <tbody>${bookings.map(b => `
+                        <tr>
+                            <td><code>${b.bookingReference}</code></td>
+                            <td>${b.eventTitle}</td>
+                            <td>${b.userFullName}</td>
+                            <td>${b.userEmail}</td>
+                            <td>${b.numberOfTickets}</td>
+                            <td>₹${parseFloat(b.totalAmount).toFixed(2)}</td>
+                            <td><span class="status-badge ${b.bookingStatus === 'CONFIRMED' ? 'success' : 'danger'}">${b.bookingStatus}</span></td>
+                            <td>${new Date(b.bookingDate).toLocaleDateString()}</td>
+                        </tr>`).join('')}
+                    </tbody></table>`;
+            } catch (err) {
+                document.getElementById('bookings-admin-loading').innerHTML = '<p class="error-text">Failed to load.</p>';
+            }
+        }
+
+        async function loadAdminUsers() {
+            document.getElementById('users-admin-loading').classList.remove('hidden');
+            document.getElementById('users-admin-table').classList.add('hidden');
+            try {
+                const response = await fetch('/api/admin/users', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                });
+                const users = await response.json();
+                document.getElementById('users-admin-loading').classList.add('hidden');
+                const el = document.getElementById('users-admin-table');
+                el.classList.remove('hidden');
+                el.innerHTML = `<table class="data-table">
+                    <thead><tr><th>ID</th><th>Full Name</th><th>Username</th><th>Email</th><th>Phone</th><th>Role</th><th>Joined</th></tr></thead>
+                    <tbody>${users.map(u => `
+                        <tr>
+                            <td>${u.id}</td>
+                            <td>${u.fullName}</td>
+                            <td>${u.username}</td>
+                            <td>${u.email}</td>
+                            <td>${u.phone || '-'}</td>
+                            <td><span class="status-badge ${u.role === 'ADMIN' ? 'warning' : 'info'}">${u.role}</span></td>
+                            <td>${new Date(u.createdAt).toLocaleDateString()}</td>
+                        </tr>`).join('')}
+                    </tbody></table>`;
+            } catch (err) {
+                document.getElementById('users-admin-loading').innerHTML = '<p class="error-text">Failed to load.</p>';
+            }
+        }
+
+        function showCreateEventForm() {
+            document.getElementById('event-form-title').textContent = 'Create New Event';
+            document.getElementById('event-submit-btn').textContent = 'Create Event';
+            document.getElementById('ev-edit-id').value = '';
+            document.getElementById('event-form').reset();
+            document.getElementById('event-form-container').classList.remove('hidden');
+            document.getElementById('event-form-container').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function hideEventForm() {
+            document.getElementById('event-form-container').classList.add('hidden');
+        }
+
+        async function editEvent(eventId) {
+            try {
+                const response = await fetch(`/api/events/${eventId}`);
+                const event = await response.json();
+                document.getElementById('event-form-title').textContent = 'Edit Event';
+                document.getElementById('event-submit-btn').textContent = 'Update Event';
+                document.getElementById('ev-edit-id').value = eventId;
+                document.getElementById('ev-title').value = event.title;
+                document.getElementById('ev-category').value = event.category || 'Other';
+                document.getElementById('ev-venue').value = event.venue;
+                document.getElementById('ev-location').value = event.location;
+                document.getElementById('ev-date').value = event.eventDate ? event.eventDate.substring(0, 16) : '';
+                document.getElementById('ev-tickets').value = event.totalTickets;
+                document.getElementById('ev-price').value = event.ticketPrice;
+                document.getElementById('ev-status').value = event.status;
+                document.getElementById('ev-description').value = event.description || '';
+                document.getElementById('ev-image').value = event.imageUrl || '';
+                document.getElementById('event-form-container').classList.remove('hidden');
+                document.getElementById('event-form-container').scrollIntoView({ behavior: 'smooth' });
+            } catch (err) {
+                alert('Failed to load event.');
+            }
+        }
+
+        document.getElementById('event-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const editId = document.getElementById('ev-edit-id').value;
+            const btn = document.getElementById('event-submit-btn');
+            btn.disabled = true;
+            btn.textContent = editId ? 'Updating...' : 'Creating...';
+
+            const data = {
+                title: document.getElementById('ev-title').value,
+                category: document.getElementById('ev-category').value,
+                venue: document.getElementById('ev-venue').value,
+                location: document.getElementById('ev-location').value,
+                eventDate: document.getElementById('ev-date').value + ':00',
+                totalTickets: parseInt(document.getElementById('ev-tickets').value),
+                ticketPrice: parseFloat(document.getElementById('ev-price').value),
+                status: document.getElementById('ev-status').value,
+                description: document.getElementById('ev-description').value,
+                imageUrl: document.getElementById('ev-image').value
+            };
+
+            try {
+                const url = editId ? `/api/events/${editId}` : '/api/events';
+                const method = editId ? 'PUT' : 'POST';
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    hideEventForm();
+                    loadAdminEvents();
+                    loadDashboard();
+                } else {
+                    document.getElementById('event-form-alert').className = 'alert alert-error';
+                    document.getElementById('event-form-alert').textContent = result.message || 'Operation failed!';
+                    document.getElementById('event-form-alert').classList.remove('hidden');
+                }
+            } catch (err) {
+                alert('Error saving event.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = editId ? 'Update Event' : 'Create Event';
+            }
+        });
+
+        let deleteTargetId = null;
+
+        function deleteEvent(eventId) {
+            deleteTargetId = eventId;
+            document.getElementById('delete-modal').classList.remove('hidden');
+            document.getElementById('confirm-delete-btn').onclick = confirmDelete;
+        }
+
+        async function confirmDelete() {
+            try {
+                const response = await fetch(`/api/events/${deleteTargetId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                });
+                if (response.ok) {
+                    closeDeleteModal();
+                    loadAdminEvents();
+                    loadDashboard();
+                } else {
+                    const err = await response.json();
+                    alert(err.message || 'Deletion failed!');
+                }
+            } catch (e) {
+                alert('Error deleting event.');
+            }
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('delete-modal').classList.add('hidden');
+            deleteTargetId = null;
+        }
+    </script>
+</body>
+</html>

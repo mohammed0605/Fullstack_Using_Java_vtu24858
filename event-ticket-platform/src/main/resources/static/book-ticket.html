@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Ticket - EventPlatform</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo-icon">🎟️</span>
+            <a href="/events.html">EventPlatform</a>
+        </div>
+        <div class="nav-links">
+            <a href="/events.html">Events</a>
+            <span id="nav-user-links"></span>
+        </div>
+    </nav>
+
+    <div class="main-content page-with-nav">
+        <div class="breadcrumb">
+            <a href="/events.html">← Back to Events</a>
+        </div>
+
+        <div id="booking-container" class="booking-layout">
+            <div id="event-loading" class="loading-state">
+                <div class="spinner-large"></div>
+                <p>Loading event details...</p>
+            </div>
+        </div>
+
+        <!-- Booking Success -->
+        <div id="booking-success" class="hidden">
+            <div class="success-card">
+                <div class="success-icon">✅</div>
+                <h2>Booking Confirmed!</h2>
+                <p>Your tickets have been booked successfully.</p>
+                <div id="booking-summary"></div>
+                <div class="ticket-display" id="tickets-display"></div>
+                <div class="success-actions">
+                    <button class="btn btn-primary" onclick="window.location.href='/dashboard.html'">View My Tickets</button>
+                    <button class="btn btn-outline" onclick="window.location.href='/events.html'">Browse More Events</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/script.js"></script>
+    <script>
+        requireAuth();
+        updateNavLinks();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventId = urlParams.get('eventId');
+
+        if (!eventId) {
+            window.location.href = '/events.html';
+        }
+
+        let currentEvent = null;
+        let selectedTickets = 1;
+
+        loadEventDetails();
+
+        async function loadEventDetails() {
+            try {
+                const response = await fetch(`/api/events/${eventId}`);
+                currentEvent = await response.json();
+
+                if (!response.ok) {
+                    document.getElementById('event-loading').innerHTML = '<p class="error-text">Event not found.</p>';
+                    return;
+                }
+
+                renderBookingForm();
+            } catch (err) {
+                document.getElementById('event-loading').innerHTML = '<p class="error-text">Failed to load event.</p>';
+            }
+        }
+
+        function renderBookingForm() {
+            const event = currentEvent;
+            const date = new Date(event.eventDate);
+            const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            document.getElementById('booking-container').innerHTML = `
+                <div class="booking-left">
+                    <div class="event-summary-card">
+                        <div class="event-summary-header" style="background: linear-gradient(135deg, #667eea, #764ba2)">
+                            <h2>${event.title}</h2>
+                            <span class="event-category-tag">${event.category || 'General'}</span>
+                        </div>
+                        <div class="event-summary-body">
+                            <div class="summary-row"><span>📅</span><span>${dateStr}</span></div>
+                            <div class="summary-row"><span>⏰</span><span>${timeStr}</span></div>
+                            <div class="summary-row"><span>🏛️</span><span>${event.venue}</span></div>
+                            <div class="summary-row"><span>📍</span><span>${event.location}</span></div>
+                            <div class="summary-row"><span>🎫</span><span>${event.availableTickets} tickets available</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="booking-right">
+                    <div class="booking-form-card">
+                        <h2>Book Your Tickets</h2>
+                        <div id="booking-alert" class="alert hidden"></div>
+
+                        <div class="form-section">
+                            <h3>Select Tickets</h3>
+                            <div class="ticket-counter">
+                                <button class="counter-btn" onclick="changeTickets(-1)">−</button>
+                                <span id="ticket-count" class="counter-value">1</span>
+                                <button class="counter-btn" onclick="changeTickets(1)">+</button>
+                            </div>
+                            <p class="counter-label">Number of tickets (max ${Math.min(event.availableTickets, 10)})</p>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Payment Method</h3>
+                            <div class="payment-options">
+                                <label class="payment-option selected" for="credit">
+                                    <input type="radio" id="credit" name="payment" value="CREDIT_CARD" checked>
+                                    <span>💳 Credit Card</span>
+                                </label>
+                                <label class="payment-option" for="debit">
+                                    <input type="radio" id="debit" name="payment" value="DEBIT_CARD">
+                                    <span>💳 Debit Card</span>
+                                </label>
+                                <label class="payment-option" for="upi">
+                                    <input type="radio" id="upi" name="payment" value="UPI">
+                                    <span>📱 UPI</span>
+                                </label>
+                                <label class="payment-option" for="netbanking">
+                                    <input type="radio" id="netbanking" name="payment" value="NET_BANKING">
+                                    <span>🏦 Net Banking</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="price-breakdown">
+                            <div class="price-row">
+                                <span>Price per ticket</span>
+                                <span>₹${parseFloat(event.ticketPrice).toFixed(2)}</span>
+                            </div>
+                            <div class="price-row">
+                                <span>Quantity</span>
+                                <span id="qty-display">× 1</span>
+                            </div>
+                            <div class="price-row">
+                                <span>Service fee</span>
+                                <span>₹0.00</span>
+                            </div>
+                            <div class="price-row total">
+                                <span>Total Amount</span>
+                                <span id="total-price">₹${parseFloat(event.ticketPrice).toFixed(2)}</span>
+                            </div>
+                        </div>
+
+                        <div class="payment-simulation-note">
+                            🔒 This is a simulated payment. No real transaction will occur.
+                        </div>
+
+                        <button class="btn btn-primary btn-full btn-large" id="confirm-btn" onclick="confirmBooking()">
+                            Confirm Booking & Pay
+                        </button>
+                    </div>
+                </div>`;
+
+            // Payment option selection style
+            document.querySelectorAll('.payment-option').forEach(label => {
+                label.querySelector('input').addEventListener('change', () => {
+                    document.querySelectorAll('.payment-option').forEach(l => l.classList.remove('selected'));
+                    label.classList.add('selected');
+                });
+            });
+        }
+
+        function changeTickets(delta) {
+            const event = currentEvent;
+            const max = Math.min(event.availableTickets, 10);
+            selectedTickets = Math.max(1, Math.min(max, selectedTickets + delta));
+            document.getElementById('ticket-count').textContent = selectedTickets;
+            document.getElementById('qty-display').textContent = `× ${selectedTickets}`;
+            const total = parseFloat(event.ticketPrice) * selectedTickets;
+            document.getElementById('total-price').textContent = `₹${total.toFixed(2)}`;
+        }
+
+        async function confirmBooking() {
+            const btn = document.getElementById('confirm-btn');
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+
+            const paymentMethod = document.querySelector('input[name="payment"]:checked').value;
+
+            const data = {
+                eventId: parseInt(eventId),
+                numberOfTickets: selectedTickets,
+                paymentMethod: paymentMethod
+            };
+
+            try {
+                const response = await fetch('/api/bookings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    showBookingSuccess(result);
+                } else {
+                    document.getElementById('booking-alert').className = 'alert alert-error';
+                    document.getElementById('booking-alert').textContent = result.message || 'Booking failed!';
+                    document.getElementById('booking-alert').classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.textContent = 'Confirm Booking & Pay';
+                }
+            } catch (err) {
+                document.getElementById('booking-alert').className = 'alert alert-error';
+                document.getElementById('booking-alert').textContent = 'Connection error. Please try again.';
+                document.getElementById('booking-alert').classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = 'Confirm Booking & Pay';
+            }
+        }
+
+        function showBookingSuccess(booking) {
+            document.getElementById('booking-container').classList.add('hidden');
+            document.getElementById('booking-success').classList.remove('hidden');
+
+            document.getElementById('booking-summary').innerHTML = `
+                <div class="booking-confirmation-details">
+                    <div class="conf-row"><strong>Booking Reference:</strong> <code>${booking.bookingReference}</code></div>
+                    <div class="conf-row"><strong>Event:</strong> ${booking.eventTitle}</div>
+                    <div class="conf-row"><strong>Venue:</strong> ${booking.eventVenue}</div>
+                    <div class="conf-row"><strong>Tickets:</strong> ${booking.numberOfTickets}</div>
+                    <div class="conf-row"><strong>Amount Paid:</strong> ₹${parseFloat(booking.totalAmount).toFixed(2)}</div>
+                    <div class="conf-row"><strong>Payment:</strong> <span class="status-badge success">${booking.paymentStatus}</span></div>
+                </div>`;
+
+            document.getElementById('tickets-display').innerHTML = `
+                <h3>Your Ticket IDs</h3>
+                <div class="ticket-ids">
+                    ${booking.ticketIds.map(tid => `<span class="ticket-id-badge">${tid}</span>`).join('')}
+                </div>`;
+        }
+    </script>
+</body>
+</html>

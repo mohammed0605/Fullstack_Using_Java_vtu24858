@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Dashboard - EventPlatform</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo-icon">🎟️</span>
+            <a href="/events.html">EventPlatform</a>
+        </div>
+        <div class="nav-links">
+            <a href="/events.html">Events</a>
+            <a href="/dashboard.html" class="active">My Dashboard</a>
+            <span id="nav-user-links"></span>
+        </div>
+    </nav>
+
+    <div class="main-content page-with-nav">
+        <div class="dashboard-header">
+            <div>
+                <h1>My Dashboard</h1>
+                <p id="welcome-msg">Welcome back!</p>
+            </div>
+            <button class="btn btn-primary" onclick="window.location.href='/events.html'">Browse Events</button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">🎫</div>
+                <div class="stat-info">
+                    <div class="stat-number" id="total-bookings">0</div>
+                    <div class="stat-label">Total Bookings</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-info">
+                    <div class="stat-number" id="confirmed-bookings">0</div>
+                    <div class="stat-label">Confirmed</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💵</div>
+                <div class="stat-info">
+                    <div class="stat-number" id="total-spent">₹0</div>
+                    <div class="stat-label">Total Spent</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎪</div>
+                <div class="stat-info">
+                    <div class="stat-number" id="upcoming-events">0</div>
+                    <div class="stat-label">Upcoming Events</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-header">
+            <h2>My Bookings</h2>
+            <div class="filter-tabs" id="booking-tabs">
+                <button class="tab-btn active" onclick="filterBookings('ALL')">All</button>
+                <button class="tab-btn" onclick="filterBookings('CONFIRMED')">Confirmed</button>
+                <button class="tab-btn" onclick="filterBookings('CANCELLED')">Cancelled</button>
+            </div>
+        </div>
+
+        <div id="bookings-loading" class="loading-state">
+            <div class="spinner-large"></div>
+            <p>Loading your bookings...</p>
+        </div>
+
+        <div id="bookings-list" class="bookings-list hidden"></div>
+
+        <div id="no-bookings" class="empty-state hidden">
+            <div class="empty-icon">🎫</div>
+            <h3>No bookings yet</h3>
+            <p>Start by browsing available events</p>
+            <button class="btn btn-primary" onclick="window.location.href='/events.html'">Browse Events</button>
+        </div>
+    </div>
+
+    <!-- Cancel Confirmation Modal -->
+    <div id="cancel-modal" class="modal hidden">
+        <div class="modal-backdrop" onclick="closeCancelModal()"></div>
+        <div class="modal-content modal-small">
+            <h3>Cancel Booking?</h3>
+            <p>Are you sure you want to cancel this booking? The amount will be refunded.</p>
+            <div class="modal-actions">
+                <button class="btn btn-danger" id="confirm-cancel-btn">Yes, Cancel</button>
+                <button class="btn btn-outline" onclick="closeCancelModal()">Keep Booking</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/script.js"></script>
+    <script>
+        requireAuth();
+        updateNavLinks();
+
+        document.getElementById('welcome-msg').textContent = `Welcome back, ${localStorage.getItem('fullName') || localStorage.getItem('username')}!`;
+
+        let allBookings = [];
+
+        loadBookings();
+
+        async function loadBookings() {
+            try {
+                const response = await fetch('/api/bookings/my-tickets', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                });
+                allBookings = await response.json();
+                updateStats(allBookings);
+                renderBookings(allBookings);
+            } catch (err) {
+                document.getElementById('bookings-loading').innerHTML = '<p class="error-text">Failed to load bookings.</p>';
+            }
+        }
+
+        function updateStats(bookings) {
+            const confirmed = bookings.filter(b => b.bookingStatus === 'CONFIRMED');
+            const totalSpent = confirmed.reduce((sum, b) => sum + parseFloat(b.totalAmount), 0);
+            const upcoming = confirmed.filter(b => new Date(b.eventDate) > new Date());
+
+            document.getElementById('total-bookings').textContent = bookings.length;
+            document.getElementById('confirmed-bookings').textContent = confirmed.length;
+            document.getElementById('total-spent').textContent = '₹' + totalSpent.toFixed(2);
+            document.getElementById('upcoming-events').textContent = upcoming.length;
+        }
+
+        function filterBookings(status) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            if (status === 'ALL') {
+                renderBookings(allBookings);
+            } else {
+                renderBookings(allBookings.filter(b => b.bookingStatus === status));
+            }
+        }
+
+        function renderBookings(bookings) {
+            const list = document.getElementById('bookings-list');
+            const loading = document.getElementById('bookings-loading');
+            const noBookings = document.getElementById('no-bookings');
+
+            loading.classList.add('hidden');
+
+            if (bookings.length === 0) {
+                list.classList.add('hidden');
+                noBookings.classList.remove('hidden');
+                return;
+            }
+
+            noBookings.classList.add('hidden');
+            list.classList.remove('hidden');
+            list.innerHTML = bookings.map(booking => createBookingCard(booking)).join('');
+        }
+
+        function createBookingCard(booking) {
+            const date = new Date(booking.eventDate);
+            const dateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            const bookingDate = new Date(booking.bookingDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            const statusClass = booking.bookingStatus === 'CONFIRMED' ? 'success' : booking.bookingStatus === 'CANCELLED' ? 'danger' : 'warning';
+            const isUpcoming = new Date(booking.eventDate) > new Date();
+
+            return `
+                <div class="booking-card">
+                    <div class="booking-card-header">
+                        <div>
+                            <h3>${booking.eventTitle}</h3>
+                            <p class="booking-ref">Ref: <code>${booking.bookingReference}</code></p>
+                        </div>
+                        <span class="status-badge ${statusClass}">${booking.bookingStatus}</span>
+                    </div>
+                    <div class="booking-card-body">
+                        <div class="booking-details-grid">
+                            <div><span>📅</span> ${dateStr}</div>
+                            <div><span>📍</span> ${booking.eventVenue}</div>
+                            <div><span>🎫</span> ${booking.numberOfTickets} ticket${booking.numberOfTickets > 1 ? 's' : ''}</div>
+                            <div><span>💵</span> ₹${parseFloat(booking.totalAmount).toFixed(2)}</div>
+                            <div><span>📋</span> Booked on ${bookingDate}</div>
+                            <div><span>💳</span> ${booking.paymentStatus || 'N/A'}</div>
+                        </div>
+                        ${booking.ticketIds && booking.ticketIds.length > 0 ? `
+                        <div class="ticket-ids-section">
+                            <strong>Ticket IDs:</strong>
+                            <div class="ticket-ids">
+                                ${booking.ticketIds.map(t => `<span class="ticket-id-badge">${t}</span>`).join('')}
+                            </div>
+                        </div>` : ''}
+                    </div>
+                    ${booking.bookingStatus === 'CONFIRMED' && isUpcoming ? `
+                    <div class="booking-card-footer">
+                        <button class="btn btn-danger-outline btn-sm" onclick="cancelBooking(${booking.bookingId})">Cancel Booking</button>
+                    </div>` : ''}
+                </div>`;
+        }
+
+        let cancelTargetId = null;
+
+        function cancelBooking(bookingId) {
+            cancelTargetId = bookingId;
+            document.getElementById('cancel-modal').classList.remove('hidden');
+            document.getElementById('confirm-cancel-btn').onclick = confirmCancel;
+        }
+
+        async function confirmCancel() {
+            const btn = document.getElementById('confirm-cancel-btn');
+            btn.disabled = true;
+            btn.textContent = 'Cancelling...';
+
+            try {
+                const response = await fetch(`/api/bookings/${cancelTargetId}/cancel`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                });
+                if (response.ok) {
+                    closeCancelModal();
+                    loadBookings();
+                } else {
+                    const err = await response.json();
+                    alert(err.message || 'Cancellation failed!');
+                }
+            } catch (e) {
+                alert('Error cancelling booking.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Yes, Cancel';
+            }
+        }
+
+        function closeCancelModal() {
+            document.getElementById('cancel-modal').classList.add('hidden');
+            cancelTargetId = null;
+        }
+    </script>
+</body>
+</html>

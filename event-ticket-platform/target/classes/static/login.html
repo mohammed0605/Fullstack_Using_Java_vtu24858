@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - EventPlatform</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <div class="logo-icon">🎟️</div>
+                <h1>EventPlatform</h1>
+                <p>Sign in to your account</p>
+            </div>
+            <div id="alert-box" class="alert hidden"></div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <div class="input-icon-wrap">
+                        <span class="input-icon">👤</span>
+                        <input type="text" id="username" name="username" placeholder="Enter your username" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-icon-wrap">
+                        <span class="input-icon">🔒</span>
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                        <span class="toggle-password" onclick="togglePassword('password')">👁</span>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full" id="login-btn">
+                    <span id="login-text">Sign In</span>
+                    <span id="login-spinner" class="spinner hidden"></span>
+                </button>
+            </form>
+            <div class="auth-footer">
+                <p>Don't have an account? <a href="/register.html">Create one</a></p>
+            </div>
+        </div>
+    </div>
+    <script src="/js/script.js"></script>
+    <script>
+        if (localStorage.getItem('token')) {
+            const role = localStorage.getItem('role');
+            window.location.href = role === 'ADMIN' ? '/admin.html' : '/dashboard.html';
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('login-btn');
+            const text = document.getElementById('login-text');
+            const spinner = document.getElementById('login-spinner');
+
+            btn.disabled = true;
+            text.textContent = 'Signing in...';
+            spinner.classList.remove('hidden');
+
+            const data = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('token', result.token);
+                    localStorage.setItem('username', result.username);
+                    localStorage.setItem('fullName', result.fullName);
+                    localStorage.setItem('email', result.email);
+                    localStorage.setItem('role', result.role);
+                    localStorage.setItem('userId', result.userId);
+                    showAlert('Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = result.role === 'ADMIN' ? '/admin.html' : '/dashboard.html';
+                    }, 1000);
+                } else {
+                    showAlert(result.message || 'Invalid credentials!', 'error');
+                }
+            } catch (err) {
+                showAlert('Connection error. Please try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                text.textContent = 'Sign In';
+                spinner.classList.add('hidden');
+            }
+        });
+
+        function togglePassword(fieldId) {
+            const field = document.getElementById(fieldId);
+            field.type = field.type === 'password' ? 'text' : 'password';
+        }
+    </script>
+</body>
+</html>
